@@ -11,7 +11,7 @@ int main(int argc, char **argv){
     }
 
 
-    //char message[] = "This is the message to hash!!";
+    char message[] = "This is the message to hash!!";
 
     FILE *f_in;
     if((f_in = fopen(argv[1],"r"))== NULL){
@@ -29,7 +29,7 @@ int main(int argc, char **argv){
     EVP_DigestUpdate(md, message, strlen(message));
 
     unsigned char md_value[20]; //160 bits long sha1 returns
-    int md_len; //updated by openssl, real final lenght, sould be as up, but just to be sure
+    unsigned int md_len; //updated by openssl, real final lenght, sould be as up, but just to be sure
 
     EVP_DigestFinal(md, md_value, &md_len);
 

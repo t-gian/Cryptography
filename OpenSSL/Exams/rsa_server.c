@@ -1,6 +1,6 @@
 /**
  * 0) the server owns an RSA keypair named rsa_server_main
- * 1) the server generates a fresh new RSA keypair named rsa_server_main
+ * 1) the server generates a fresh new RSA keypair named rsa_server_temp
  * 2) the server signs the public key exported from rsa_server_temp with rsa_server_main
  * 3) the server generates a random key and IV of the proper size to be used with AES256 in CBC mode
  * 4) the server encrypts the rsa_server_temp with the newly generated key and IV using AES256 in CBC mode

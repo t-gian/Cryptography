@@ -28,8 +28,12 @@ void handle_errors(){
     abort();
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    if(argc != 3){
+        fprintf(stderr,"Invalid parameters. Usage: %s file_input file_output\n",argv[0]);
+        exit(1);
+    }
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
 
@@ -53,8 +57,18 @@ int main()
     memcpy(k, r1, 16);
     memcpy(k + 16, r2, 16);
 
-    /* Already opened */
-    FILE *f_in, *f_out;
+    FILE *f_in = fopen(argv[1], "rb");
+    if (!f_in) {
+        fprintf(stderr, "Error opening input file %s\n", argv[1]);
+        return 1;
+    }
+
+    FILE *f_out = fopen(argv[2], "wb");
+    if (!f_out) {
+        fprintf(stderr, "Error opening output file %s\n", argv[2]);
+        fclose(f_in);
+        return 1;
+    }
 
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
@@ -63,7 +77,7 @@ int main()
     }
 
     int length, n_read;
-    unsigned char buffer[MAX_BUFFER], ciphertext[MAX_BUFFER+16];
+    unsigned char buffer[MAX_BUFFER], ciphertext[MAX_BUFFER+16]; // max padding
 
     while ((n_read = fread(buffer,1,MAX_BUFFER,f_in)) > 0){
         if (!EVP_CipherUpdate(ctx,ciphertext,&length,buffer,n_read)) {
@@ -90,10 +104,17 @@ int main()
 
     /* Sign f_out with RSA */
     rewind(f_out);
+    EVP_PKEY_CTX *rsa_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+    if (!rsa_ctx || EVP_PKEY_keygen_init(rsa_ctx) <= 0 || 
+        EVP_PKEY_CTX_set_rsa_keygen_bits(rsa_ctx, 2048) <= 0) {
+        handle_errors();
+    }
 
-    /* Already loaded (it's supposed to be a private key) */
-    EVP_PKEY *rsa_key;
-
+    EVP_PKEY *rsa_key = NULL;
+    if (EVP_PKEY_keygen(rsa_ctx, &rsa_key) <= 0) {
+        handle_errors();
+    }
+    EVP_PKEY_CTX_free(rsa_ctx);
     EVP_MD_CTX *sign_ctx = EVP_MD_CTX_new();
 
     if (!EVP_DigestSignInit(sign_ctx, NULL, EVP_sha256(), NULL, rsa_key)) {
@@ -115,6 +136,14 @@ int main()
     if (!EVP_DigestSignFinal(sign_ctx, signature, &sig_len)) {
         handle_errors();
     }
+    
+    FILE *sig_file = fopen("signature.bin", "wb");
+    if (!sig_file) {
+        fprintf(stderr, "Error creating signature file\n");
+        handle_errors();
+    }
+    fwrite(signature, 1, sig_len, sig_file);
+    printf("Signature successfully written to signature.bin\n");
 
     EVP_MD_CTX_free(sign_ctx);
 

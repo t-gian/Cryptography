@@ -6,6 +6,7 @@
  * The mac needs to be computed using hmac-sha256
  *
  **/
+#include <stddef.h>
 #include <stdio.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -24,13 +25,13 @@ int main(int argc, char **argv){
     }
     FILE *f_in;
     if((f_in = fopen(argv[1],"r")) == NULL) {
-        fprintf(stderr,"Couldn't open the input file, try again\n");
+        fprintf(stderr,"Couldn't open the input file %s, try again\n", argv[1]);
         exit(1);
     }
 
     FILE *f_key;
-    if((f_key = fopen("/keys/hmac_key","r")) == NULL) {
-        fprintf(stderr,"Couldn't open the input file, try again\n");
+    if((f_key = fopen("./keys/hmac_key","r")) == NULL) {
+        fprintf(stderr,"Couldn't open the key file, try again\n");
         exit(1);
     }
     char key_buff[MAXBUF];
@@ -38,16 +39,22 @@ int main(int argc, char **argv){
     if((n0 = fread(key_buff, 1, MAXBUF, f_key)) < 0){
         handle_errors();
     }
+    /* convert key from hex to binary */
     unsigned char key[strlen(key_buff)/2];
     for(int i = 0; i < strlen(key_buff)/2;i++){
-        sscanf(&argv[2][2*i],"%2hhx", &key[i]);
+        sscanf(&key_buff[2*i],"%2hhx", &key[i]);
     }
     size_t n;
     unsigned char buffer[MAXBUF];
     EVP_MD_CTX  *hmac_ctx = EVP_MD_CTX_new();
+
+    if (hmac_ctx == NULL){
+      handle_errors();
+    }
+    /* Compute the HMAC */
     EVP_PKEY *hkey;
-    hkey = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, NULL, key, 32); //sha256
-    if(!EVP_DigestSignInit(hmac_ctx, NULL, EVP_sha1(), NULL, hkey))
+    hkey = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, NULL, key, 32);
+    if(!EVP_DigestSignInit(hmac_ctx, NULL, EVP_sha256(), NULL, hkey))
         handle_errors();
 
     while((n = fread(buffer,1,MAXBUF,f_in)) > 0){
@@ -65,7 +72,8 @@ int main(int argc, char **argv){
 
     // void EVP_MD_CTX_free(EVP_MD_CTX *ctx);
     EVP_MD_CTX_free(hmac_ctx);
-    // VERIFICATION PART
+   
+    /* VERIFICATION PART */
     unsigned char hmac_binary[strlen(argv[2])/2];
     for(int i = 0; i < strlen(argv[2])/2;i++){
         sscanf(&argv[2][2*i],"%2hhx", &hmac_binary[i]);
@@ -73,9 +81,12 @@ int main(int argc, char **argv){
 
     // if( CRYPTO_memcmp(hmac_binary, hmac_value, hmac_len) == 0 )
     if( (hmac_len == (strlen(argv[2])/2)) && (CRYPTO_memcmp(hmac_binary, hmac_value, hmac_len) == 0))
-
+      { 
+        printf("HMAC verification succesful, data integrity is checked\n");
         return 0;
+      }
     else
+      { printf("HMAC verification failed, check for data integrity failed \n");
         return -1;
-
+      }
 }

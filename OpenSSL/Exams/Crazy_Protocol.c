@@ -9,15 +9,13 @@
  * 3. Obtain the second key as
  * k2 = (rand1 * rand2) / (rand1 - rand2) mod 2^128
  *
- * 4. Encrypt k2 using k1 using a strong encryption algorithm (and mode) of your choice
+ * 4. Encrypt k2 using k1 using a strong symmetric encryption algorithm (and mode) of your choice
  * call it enc_k2.
  *
  * 5. Generate an RSA keypair with a 2048 bit modulus.
  *
  * 6. Encrypt enc_k2 using the just generated RSA key.
  *
- * Implement in C the protocol steps described above, make the proper decisions when
- * the protocol omits information.
  *
  **/
 #include <stdio.h>
@@ -77,7 +75,7 @@ int main(){
      char *k1_hex = BN_bn2hex(key1);
      char *k2_hex = BN_bn2hex(key2);
 
-    if (!EVP_CipherInit(enc_ctx, EVP_aes_128_cbc(), k1_hex, NULL, ENCRYPT))
+    if (!EVP_CipherInit(enc_ctx, EVP_aes_128_cbc(), (unsigned char *) k1_hex, NULL, ENCRYPT))
         handle_errors();
     unsigned char enc_k2[strlen(k2_hex) +16];
     int length,update_len,ciphertext_len = 0;
@@ -109,15 +107,19 @@ int main(){
     }
     // Determine the size of the output
     size_t encrypted_msg_len;
-    if (EVP_PKEY_encrypt(enc_ctx_rsa, NULL, &encrypted_msg_len, k2_hex, strlen(k2_hex)) <= 0) {
+    if (EVP_PKEY_encrypt(enc_ctx_rsa, NULL, &encrypted_msg_len, (unsigned char *) k2_hex, strlen(k2_hex)) <= 0) {
         handle_errors();
     }
 
 
     unsigned char encrypted_msg[encrypted_msg_len];
-    if (EVP_PKEY_encrypt(enc_ctx_rsa, encrypted_msg, &encrypted_msg_len, k2_hex, strlen(k2_hex)) <= 0) {
+    if (EVP_PKEY_encrypt(enc_ctx_rsa, encrypted_msg, &encrypted_msg_len, (unsigned char *) k2_hex, strlen(k2_hex)) <= 0) {
         handle_errors();
     }
-
+    printf("Final encrypted message is: ");
+    for (int i = 0; i < encrypted_msg_len; i++) {
+        printf("%02x", encrypted_msg[i]);
+    }
+    printf("\n");
 }
 
