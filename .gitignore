@@ -1,10 +1,10 @@
-OpenSSL/.idea
-OpenSSL/BigNum/.idea
-OpenSSL/cmake-build-debug
-OpenSSL/Digest/.idea
-OpenSSL/Encryption/First_Decryption/.idea
-OpenSSL/Encryption/Guess_Algo/.idea
-OpenSSL/Encryption/In_The_Name_Of_The_Cipher/.idea
-OpenSSL/Encryption/Padding/.idea
-OpenSSL/Rand/.idea
+/OpenSSL/.idea
+/OpenSSL/BigNum/.idea
+/OpenSSL/cmake-build-debug
+/OpenSSL/Digest/.idea
+/OpenSSL/Encryption/First_Decryption/.idea
+/OpenSSL/Encryption/Guess_Algo/.idea
+/OpenSSL/Encryption/In_The_Name_Of_The_Cipher/.idea
+/OpenSSL/Encryption/Padding/.idea
+/OpenSSL/Rand/.idea
 
