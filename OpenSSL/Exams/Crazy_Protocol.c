@@ -91,34 +91,69 @@ int main(){
     ciphertext_len += final_len;
 
     EVP_CIPHER_CTX_free(enc_ctx);
+     printf("AES-encrypted k2 (enc_k2): ");
+    for (int i = 0; i < ciphertext_len; i++) {
+        printf("%02x", enc_k2[i]);
+    }
+    printf("\n");
     /* Generate an RSA Keypair with a 2048 bit modulus*/
     EVP_PKEY *rsa_keypair = NULL;
-    int bits = 2048;
-    if((rsa_keypair = EVP_RSA_gen(bits)) == NULL )
-        handle_errors();
-    /*Encyrpt k2 with the just generated keypair*/
-    EVP_PKEY_CTX* enc_ctx_rsa = EVP_PKEY_CTX_new(rsa_keypair, NULL);
-    if (EVP_PKEY_encrypt_init(enc_ctx_rsa) <= 0) {
+    EVP_PKEY_CTX *keygen_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+    if (!keygen_ctx || EVP_PKEY_keygen_init(keygen_ctx) <= 0 ||
+        EVP_PKEY_CTX_set_rsa_keygen_bits(keygen_ctx, 2048) <= 0 ||
+        EVP_PKEY_keygen(keygen_ctx, &rsa_keypair) <= 0) {
         handle_errors();
     }
-    // Specific configurations can be performed through the initialized context
+    EVP_PKEY_CTX_free(keygen_ctx);
+
+    EVP_PKEY_CTX *enc_ctx_rsa = EVP_PKEY_CTX_new(rsa_keypair, NULL);
+    if (!enc_ctx_rsa || EVP_PKEY_encrypt_init(enc_ctx_rsa) <= 0) {
+        handle_errors();
+    }
+
     if (EVP_PKEY_CTX_set_rsa_padding(enc_ctx_rsa, RSA_PKCS1_OAEP_PADDING) <= 0) {
         handle_errors();
     }
-    // Determine the size of the output
+
     size_t encrypted_msg_len;
-    if (EVP_PKEY_encrypt(enc_ctx_rsa, NULL, &encrypted_msg_len, (unsigned char *) k2_hex, strlen(k2_hex)) <= 0) {
+    if (EVP_PKEY_encrypt(enc_ctx_rsa, NULL, &encrypted_msg_len, enc_k2, ciphertext_len) <= 0) {
         handle_errors();
     }
-
 
     unsigned char encrypted_msg[encrypted_msg_len];
-    if (EVP_PKEY_encrypt(enc_ctx_rsa, encrypted_msg, &encrypted_msg_len, (unsigned char *) k2_hex, strlen(k2_hex)) <= 0) {
+    if (EVP_PKEY_encrypt(enc_ctx_rsa, encrypted_msg, &encrypted_msg_len, enc_k2, ciphertext_len) <= 0) {
         handle_errors();
     }
-    printf("Final encrypted message is: ");
+
+    printf("RSA-encrypted enc_k2: ");
     for (int i = 0; i < encrypted_msg_len; i++) {
         printf("%02x", encrypted_msg[i]);
+    }
+    printf("\n");
+
+    EVP_PKEY_CTX_free(enc_ctx_rsa);
+
+    /* Decryption to verify */
+    EVP_PKEY_CTX *dec_ctx = EVP_PKEY_CTX_new(rsa_keypair, NULL);
+    if (EVP_PKEY_decrypt_init(dec_ctx) <= 0 || EVP_PKEY_CTX_set_rsa_padding(dec_ctx, RSA_PKCS1_OAEP_PADDING) <= 0) {
+        handle_errors();
+    }
+
+    size_t decrypted_msg_len;
+    if (EVP_PKEY_decrypt(dec_ctx, NULL, &decrypted_msg_len, encrypted_msg, encrypted_msg_len) <= 0) {
+        handle_errors();
+    }
+
+    unsigned char decrypted_msg[decrypted_msg_len + 1];
+    if (EVP_PKEY_decrypt(dec_ctx, decrypted_msg, &decrypted_msg_len, encrypted_msg, encrypted_msg_len) <= 0) {
+        handle_errors();
+    }
+
+    decrypted_msg[decrypted_msg_len] = '\0';
+  
+    printf("Decrypted enc_k2: ");
+    for (int i = 0; i < decrypted_msg_len; i++) {
+        printf("%02x", decrypted_msg[i]);
     }
     printf("\n");
 }

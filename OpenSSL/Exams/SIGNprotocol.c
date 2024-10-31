@@ -18,6 +18,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <openssl/rsa.h>
+#include <openssl/pem.h>
 #include <string.h>
 
 #define ENCRYPT 1
@@ -116,8 +117,21 @@ int main(int argc, char **argv)
     }
     EVP_PKEY_CTX_free(rsa_ctx);
     EVP_MD_CTX *sign_ctx = EVP_MD_CTX_new();
+    /* Save key in memory (PEM format) */
+    BIO *bio_mem = BIO_new(BIO_s_mem());
+    if (!bio_mem) {
+        handle_errors();
+    }
 
-    if (!EVP_DigestSignInit(sign_ctx, NULL, EVP_sha256(), NULL, rsa_key)) {
+    if (PEM_write_bio_PrivateKey(bio_mem, rsa_key, NULL, NULL, 0, NULL, NULL) <= 0) {
+        handle_errors();
+    }
+    EVP_PKEY *rsa_priv_key = PEM_read_bio_PrivateKey(bio_mem, NULL, NULL, NULL);
+    if (!rsa_priv_key){
+        handle_errors();
+    }
+
+    if (!EVP_DigestSignInit(sign_ctx, NULL, EVP_sha256(), NULL, rsa_priv_key)) {
         handle_errors();
     }
 
